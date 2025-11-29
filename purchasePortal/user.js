@@ -3,7 +3,7 @@ const { userModel, courseModel } = require("./db");
 const router = express.Router();
 let jwt = require("jsonwebtoken");
 let bcrypt = require("bcrypt");
-let secretKey = "jfnbdndfbnbfkdnbjgdn";
+let secretKey = process.env.SECRET;
 let z = require("zod");
 
 
