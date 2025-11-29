@@ -7,7 +7,7 @@ const mongoose = require("mongoose");
 let app = exp();
 app.use(exp.json());
 
-mongoose.connect("mongodb+srv://100xmediasomething_db_user:cYsUiBMgrTJgBjr7@automationapp.varqofb.mongodb.net/todo-app-harkirat");
+mongoose.connect("");
 
 app.use("/user", userRouter)   //localhost:3000/user/signup
  //app.use("/course", courseRouter)
