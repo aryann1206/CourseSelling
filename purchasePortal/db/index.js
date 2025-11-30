@@ -21,5 +21,5 @@ let courseModel = mongoose.model("courses",courseSchema);
 
 module.exports = {
     userModel,
-    courseSchemaModel
+    courseModel
 }
