@@ -7,15 +7,20 @@ const mongoose = require("mongoose");
 let app = exp();
 app.use(exp.json());
 
-mongoose.connect("");
+try {
+    mongoose.connect("");
+}
+catch(error){
+    console.log("couldnt connect");
+}
 
 app.use("/user", userRouter)   //localhost:3000/user/signup
- //app.use("/course", courseRouter)
+//app.use("/course", courseRouter)
 
 
 
-app.listen(3000,()=>{
+app.listen(3000, () => {
     console.log("server is running");
-    
+
 })
 
