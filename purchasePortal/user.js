@@ -3,7 +3,8 @@ const { userModel, courseModel } = require("./db");
 const router = express.Router();
 let jwt = require("jsonwebtoken");
 let bcrypt = require("bcrypt");
-let secretKey = process.env.SECRET;
+//let secretKey = process.env.SECRET;
+let secretKey = "kjhvdsvd";
 let z = require("zod");
 const { message } = require("statuses");
 
@@ -41,7 +42,7 @@ router.post("/signup", async (req, res) => {
 
         let token = jwt.sign({
             username: data.username,
-            Id: user._id,
+            userId: user._id,
             role: user.role
         }, secretKey)
 
@@ -54,7 +55,7 @@ router.post("/signup", async (req, res) => {
     catch (error) {
         res.status(500).json({
             message: "internet server error",
-            error: message.error
+            error: error.message
         })
     }
 
@@ -62,7 +63,7 @@ router.post("/signup", async (req, res) => {
 
 let userloginSchema = z.object({
     username: z.string(),
-    password: z.string(),
+    password: z.string()
 
 })
 
@@ -91,7 +92,7 @@ router.post("/signin", async (req, res) => {
         }
         let token = jwt.sign({ username: user.username, userId: user._id, role: user.role }, secretKey);
         res.status(200).json({
-            message: "successfully created username ",
+            message: "successfully created username ",//not this message 
             token: token
         })
         return;
@@ -111,36 +112,45 @@ router.post("/signin", async (req, res) => {
 function middlewareAuth(req, res, next) {
     try {
         let token = req.headers.token;
-        let { userId } = jwt.verify(token, secretKey);
+
+        if (!token) {
+            return res.status(401).json({
+                message: "token missing"
+            });
+        }
+
+        let { userId, role } = jwt.verify(token, secretKey);
+
         req.userId = userId;
         req.role = role;
+
         next();
     }
     catch (error) {
-        res.status(500).json({
-            message: "internet server error",
-            error: message.error
-        })
+        return res.status(401).json({
+            message: "invalid or expired token",
+            error: error.message
+        });
     }
-
 }
 
 
 
 //------>ADD MONEY
-router.post("/wallet/add", middlewareAuth, (req, res) => {
+router.post("/wallet/add", middlewareAuth, async (req, res) => {
     try {
         let { amount } = req.body;
-        if (amount > !0) {
+        if (amount <= 0) {
             res.status(400).json({
                 message: "enter a valid amount"
             });
             return;
         }
         let _id = req.userId;
-        let user = userModel.findOne({ _id });
+        let user = await userModel.findOne({ _id });
         if (user) {
             user.wallet += amount;
+            await user.save();
             res.status(200).json({
                 message: "amount added to the wallet successfully",
                 walletbalance: user.wallet
@@ -150,7 +160,7 @@ router.post("/wallet/add", middlewareAuth, (req, res) => {
     catch (error) {
         res.status(500).json({
             message: "internet server error",
-            error: message.error
+            error: error.message
         })
     }
 
@@ -179,7 +189,7 @@ router.post("/courses", middlewareAuth, async (req, res) => {
             });
             return;
         }
-        if (0 <= !price) {
+        if (0 >=price) {
             res.status(400).json({
                 message: "need a positive number"
             });
@@ -202,7 +212,7 @@ router.post("/courses", middlewareAuth, async (req, res) => {
     catch (error) {
         res.status(500).json({
             message: "internet server error",
-            error: message.error
+            error: error.message
         })
     }
 
@@ -233,7 +243,7 @@ router.put("/courses/:courseId", middlewareAuth, async (req, res) => {
         }
         let courseId = req.params.courseId;
         let course = await courseModel.findOne({ _id: courseId });
-        if (course.createdBy === userId) {
+        if (course.createdBy == userId) {
             if (!success) {
                 res.status(400).json({
                     message: error.message
@@ -249,6 +259,7 @@ router.put("/courses/:courseId", middlewareAuth, async (req, res) => {
             if (data.price !== undefined) {
                 course.price = data.price;
             }
+            await course.save();
             res.status(201).json({
                 message: "updated the course"
             });
@@ -265,7 +276,7 @@ router.put("/courses/:courseId", middlewareAuth, async (req, res) => {
     catch (error) {
         res.status(500).json({
             message: "internet server error",
-            error: message.error
+            error: error.message
         })
     }
 
@@ -292,7 +303,7 @@ router.get("/admin/courses", middlewareAuth, async (req, res) => {
     catch (error) {
         res.status(500).json({
             message: "internet server error",
-            error: message.error
+            error: error.message
         })
     }
 
@@ -313,7 +324,7 @@ router.get("/courses", async (req, res) => {
     catch (error) {
         res.status(500).json({
             message: "internet server error",
-            error: message.error
+            error: error.message
         })
     }
 
@@ -333,11 +344,12 @@ router.post("/courses/:courseId/purchase", middlewareAuth, async (req, res) => {
                 });
                 return;
             }
-            let user = await userModel.findOne({ _id: userId });
+            let user = await userModel.findOne({ _id: req.userId });
             if (user) {
-                if (user.wallet <= course.price) {
+                if (user.wallet >= course.price) {
                     user.wallet -= course.price;
                     user.purchasedCourses.push(course._id);
+                    await user.save();
                     res.status(201).json({
                         message: "Course purchased successfully",
                         remainingWallet: user.wallet
@@ -364,7 +376,7 @@ router.post("/courses/:courseId/purchase", middlewareAuth, async (req, res) => {
     catch (error) {
         res.status(500).json({
             message: "internet server error",
-            error: message.error
+            error: error.message
         })
     }
 
@@ -372,8 +384,21 @@ router.post("/courses/:courseId/purchase", middlewareAuth, async (req, res) => {
 
 
 
-//------->9th one not done yet
+//------->purchased courses
+router.get("/purchased-courses", middlewareAuth, async (req, res) => {
+    try {
+        let userId = req.userId;  // extracted from JWT
 
+        let user = await userModel.findById(userId).populate("purchasedCourses");
+
+        res.status(200).json({
+            purchasedCourses: user.purchasedCourses
+        });
+
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
 
 
 
@@ -392,7 +417,7 @@ router.get("/me", middlewareAuth, async (req, res) => {
     catch (error) {
         res.status(500).json({
             message: "internet server error",
-            error: message.error
+            error: error.message
         })
     }
 
