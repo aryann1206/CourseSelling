@@ -31,10 +31,10 @@ router.post("/signup", async (req, res) => {
             });
             return;
         }
-
+        let hashpass = await bcrypt.hash(data.password, 10);
         let user = await userModel.create({
             username: data.username,
-            password: data.password,
+            password: hashpass,
             role: data.role,
             wallet: 0,
             purchasedCourses: []
@@ -83,24 +83,35 @@ router.post("/signin", async (req, res) => {
 
         }
 
-        let user = await userModel.findOne({ username: data.username, password: data.password });
+        let user = await userModel.findOne({ username: data.username });
+
+
         if (!user) {
             res.status(400).json({
                 message: "wrong username or password"
             });
             return;
         }
-        let token = jwt.sign({ username: user.username, userId: user._id, role: user.role }, secretKey);
-        res.status(200).json({
-            message: "successfully created username ",//not this message 
-            token: token
-        })
-        return;
+        let hash = await bcrypt.compare(data.password, user.password);
+        if (hash) {
+            let token = jwt.sign({ username: user.username, userId: user._id, role: user.role }, secretKey);
+            res.status(200).json({
+                message: "successfully created username ",//not this message 
+                token: token
+            })
+            return;
+        }
+        else {
+            res.status(400).json({
+                message: "wrong username or password"
+            });
+            return;
+        }
     }
     catch (error) {
         res.status(500).json({
             message: "internet server error",
-            error: message.error
+            error: error.message
         })
     }
 
@@ -189,7 +200,7 @@ router.post("/courses", middlewareAuth, async (req, res) => {
             });
             return;
         }
-        if (0 >=price) {
+        if (0 >= price) {
             res.status(400).json({
                 message: "need a positive number"
             });
