@@ -1,0 +1,1 @@
+A role-based course selling backend application where admins can create and manage courses, and users can browse, purchase, and access courses securely. Built using Node.js, Express, MongoDB, and JWT authentication.
